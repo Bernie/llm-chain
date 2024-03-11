@@ -1,11 +1,19 @@
 use async_trait::async_trait;
-use llm_chain::options::Options;
+use llm_chain::options::{options_from_env, Opt, OptDiscriminants, Options, OptionsCascade};
+use llm_chain::options;
 use llm_chain::output::Output;
 use llm_chain::prompt::Prompt;
 use llm_chain::tokens::{
     PromptTokensError, TokenCollection, TokenCount, Tokenizer, TokenizerError,
 };
 use llm_chain::traits::{ExecutorCreationError, ExecutorError};
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref DEFAULT_OPTIONS: Options = options!(
+        User: "As a mock large language model, I'm here to help you debug. I have received your prompt: \"{prompt}\" with options \"{options:?}\""
+    );
+}
 
 /// Executor is responsible for running the LLM and managing its context.
 pub struct Executor {
@@ -22,7 +30,16 @@ impl llm_chain::traits::Executor for Executor {
     }
 
     async fn execute(&self, options: &Options, prompt: &Prompt) -> Result<Output, ExecutorError> {
-        let output = format!( "As a mock large language model, I'm here to help you debug. I have received your prompt: \"{prompt}\" with options \"{options:?}\"");
+        let opts_from_env = options_from_env().unwrap();
+        let opts_cas = OptionsCascade::new()
+            .with_options(&DEFAULT_OPTIONS)
+            .with_options(&opts_from_env)
+            .with_options(&self.options)
+            .with_options(&options);
+        let output: String = match opts_cas.get(OptDiscriminants::User) {
+            Some(Opt::User(s)) => s.into(),
+            _ => format!("As a mock large language model, I'm here to help you debug. I have received your prompt: \"{prompt}\" with options \"{options:?}\"")
+        };
         Ok(Output::new_immediate(Prompt::text(output)))
     }
 
