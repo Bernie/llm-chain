@@ -111,9 +111,9 @@ impl llm_chain::traits::Executor for Executor {
                         &inference_params_from_options(opts)
                             .map_err(|_| ExecutorError::InvalidOptions)?,
                     ),
-                    // playback_previous_tokens
+                    play_back_previous_tokens: false,
                     // maximum_token_count
-                    ..Default::default()
+                    maximum_token_count: None
                 },
                 // OutputRequest
                 &mut Default::default(),
@@ -203,8 +203,7 @@ impl Tokenizer for LocalLlmTokenizer<'_> {
 fn model_params_from_options(opts: OptionsCascade) -> Result<ModelParameters, ()> {
     Ok(ModelParameters {
         prefer_mmap: true,
-        n_context_tokens: 2048,
-        inference_parameters: inference_params_from_options(opts)?,
+        ..Default::default()
     })
 }
 
